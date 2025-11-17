@@ -1,5 +1,6 @@
 import time
 import json
+from datetime import datetime  # 날짜 계산을 위해 import
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -8,19 +9,18 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, NoSuchElementException, StaleElementReferenceException
 from webdriver_manager.chrome import ChromeDriverManager
 
-# --- ⬇️ XPath 변수 (모두 검증 완료) ⬇️ ---
+# --- ⬇️ XPath 변수 (수익지수 제거됨) ⬇️ ---
 
-# 1. '총손익률 %' 값
+# 1. '총손익률 %' 값 (검증 완료)
 PROFIT_PCT_XPATH = "//div[starts-with(@class, 'reportContainerOld-')]//div[starts-with(@class, 'change-') and contains(text(), '%')]"
-# 2. '수익지수' 값
-PROFIT_FACTOR_XPATH = "//div[starts-with(@class, 'reportContainerOld-')]//div[starts-with(@class, 'value-') and not(contains(text(), '%'))][1]"
-# 3. '거래 목록' 탭 버튼
+# 2. '수익지수' (제거됨)
+# 3. '거래 목록' 탭 버튼 (검증 완료)
 TRADE_LIST_TAB_XPATH = "//button[@data-overflow-tooltip-text='거래목록']"
-# 4. '개요' 탭 버튼
+# 4. '개요' 탭 버튼 (검증 완료)
 OVERVIEW_TAB_XPATH = "//button[@data-overflow-tooltip-text='오버뷰']"
-# 5. '1번 거래 진입 시점'
+# 5. '1번 거래 진입 시점' (검증 완료)
 TRADE_1_ENTRY_XPATH = "//tr[@data='1']/td[4]//div[@data-part='1']"
-# 6. '현재 심볼 이름'
+# 6. '현재 심볼 이름' (검증 완료)
 SYMBOL_NAME_XPATH = "//button[@id='header-toolbar-symbol-search']//div[contains(@class, 'js-button-text')]"
 # --- ⬆️ 여기까지 XPath 변수 ⬆️ ---
 
@@ -52,44 +52,39 @@ class text_to_be_different_from:
 
 def get_strategy_data(driver, wait, previous_profit_pct):
     """
-    현재 차트의 전략 테스터에서 데이터를 스크래핑합니다. (로딩 대기 추가)
+    현재 차트의 전략 테스터에서 데이터를 스크래핑합니다. (수익지수 제거됨)
     """
     data = {}
     try:
         # 0. '개요' 탭이 활성 상태인지 확인 (먼저 클릭해서 보장)
-        print("    (0/6) '개요' 탭 클릭 시도...")
+        print("    (0/5) '개요' 탭 클릭 시도...")
         wait.until(EC.element_to_be_clickable((By.XPATH, OVERVIEW_TAB_XPATH))).click()
         print("        -> '개요' 탭 활성화")
 
-        # [수정] 0.5. '총손익률' 값이 이전 값과 달라질 때까지 대기
-        print("    (0.5/6) '전략 데이터' 로딩 대기중... (값이 바뀔 때까지)")
+        # 0.5. '총손익률' 값이 이전 값과 달라질 때까지 대기
+        print("    (0.5/5) '전략 데이터' 로딩 대기중... (값이 바뀔 때까지)")
         wait.until(
             text_to_be_different_from((By.XPATH, PROFIT_PCT_XPATH), previous_profit_pct)
         )
         print("        -> '전략 데이터' 로딩 완료")
 
         # 1. 개요 탭 데이터 수집
-        print("    (1/6) '총손익률 %' (값) 찾는 중...")
+        print("    (1/5) '총손익률 %' (값) 찾는 중...")
         profit_pct_element = wait.until(
             EC.visibility_of_element_located((By.XPATH, PROFIT_PCT_XPATH))
         )
         data['profit_pct'] = profit_pct_element.text
         print(f"        -> 찾음: {data['profit_pct']}")
 
-        print("    (2/6) '수익지수' (값) 찾는 중...")
-        profit_factor_element = wait.until(
-            EC.visibility_of_element_located((By.XPATH, PROFIT_FACTOR_XPATH))
-        )
-        data['profit_factor'] = profit_factor_element.text
-        print(f"        -> 찾음: {data['profit_factor']}")
+        # (2/6) '수익지수' 단계 제거됨
 
         # 2. '거래목록' 탭 클릭
-        print("    (3/6) '거래 목록' 탭 클릭 시도...")
+        print("    (2/5) '거래 목록' 탭 클릭 시도...")
         wait.until(EC.element_to_be_clickable((By.XPATH, TRADE_LIST_TAB_XPATH))).click()
         print("        -> 클릭 성공")
 
         # 3. 거래목록 데이터 수집 (1번 거래 진입 시점)
-        print("    (4/6) '1번 거래 진입 시점' 찾는 중...")
+        print("    (3/5) '1번 거래 진입 시점' 찾는 중...")
         trade_1_entry = wait.until(
             EC.visibility_of_element_located((By.XPATH, TRADE_1_ENTRY_XPATH))
         ).text
@@ -97,7 +92,7 @@ def get_strategy_data(driver, wait, previous_profit_pct):
         print(f"        -> 찾음: {data['trade_1_entry']}")
 
         # 4. 데이터 수집 후 '개요' 탭으로 복귀 (다음 루프를 위해)
-        print("    (5/6) '개요' 탭으로 복귀 시도...")
+        print("    (4/5) '개요' 탭으로 복귀 시도...")
         wait.until(EC.element_to_be_clickable((By.XPATH, OVERVIEW_TAB_XPATH))).click()
         print("        -> 클릭 성공 (데이터 수집 완료)")
 
@@ -112,6 +107,7 @@ def get_strategy_data(driver, wait, previous_profit_pct):
         return None
 
 def main():
+    # --- ⬇️ [수정] 심볼 개수 입력받기 ⬇️ ---
     while True:
         try:
             TOTAL_SYMBOLS_TO_SCRAPE = int(input("수집할 심볼 개수를 입력하세요 (예: 10): "))
@@ -121,6 +117,22 @@ def main():
                 print("0보다 큰 숫자를 입력하세요.")
         except ValueError:
             print("오류: 유효한 숫자를 입력하세요.")
+            
+    # --- ⬇️ [수정] 기준일 입력받기 ⬇️ ---
+    today_str = datetime.now().strftime('%Y-%m-%d')
+    while True:
+        end_date_input = input(f"기준일(YYYY-MM-DD)을 입력하세요 (기본값: {today_str}): ")
+        if not end_date_input: # User pressed Enter
+            end_date_obj = datetime.now()
+            break
+        try:
+            end_date_obj = datetime.strptime(end_date_input, '%Y-%m-%d')
+            break
+        except ValueError:
+            print("오류: YYYY-MM-DD 형식이 아닙니다. 다시 입력하세요.")
+    
+    print(f"기준일이 {end_date_obj.strftime('%Y-%m-%d')}로 설정되었습니다.")
+    # --- ⬆️ 입력받기 완료 ⬆️ ---
 
     driver = webdriver.Chrome(service=webdriver.chrome.service.Service(ChromeDriverManager().install()))
     wait = WebDriverWait(driver, 15) # 요소를 찾을 때까지 최대 15초 대기
@@ -136,7 +148,7 @@ def main():
 
     collected_data = []
     current_symbol = ""
-    last_profit_pct = "" # [수정] 이전 총손익률을 기억할 변수
+    last_profit_pct = "" # 이전 총손익률을 기억할 변수
 
     for i in range(TOTAL_SYMBOLS_TO_SCRAPE):
         print(f"\n--- 심볼 {i+1}/{TOTAL_SYMBOLS_TO_SCRAPE} 수집 시작 ---")
@@ -161,17 +173,48 @@ def main():
 
             # (B) 데이터 수집
             print("  (B) 전략 데이터 수집 시작...")
-            # [수정] 'last_profit_pct' 값을 전달
             data = get_strategy_data(driver, wait, last_profit_pct) 
             
             if data:
                 data['symbol'] = current_symbol
+
+                # --- ⬇️ [수정] 계산 로직 추가 ⬇️ ---
+                try:
+                    # 1. 수익률 파싱
+                    profit_pct_str = data['profit_pct']
+                    profit_pct_float = float(profit_pct_str.replace('+', '').replace(',', '').replace('%', ''))
+
+                    # 2. 시작 날짜 파싱
+                    start_date_str = data['trade_1_entry'] # "1991년 5월 03일"
+                    start_date_obj = datetime.strptime(start_date_str, '%Y년 %m월 %d일')
+
+                    # 3. 거래 기간(년) 계산
+                    duration_delta = end_date_obj - start_date_obj
+                    duration_years = duration_delta.days / 365.25
+
+                    if duration_years <= 0:
+                        data['trading_duration_years'] = "0.0년"
+                        data['annualized_return_pct'] = "N/A"
+                    else:
+                        # 4. 연평균 수익률 계산 (단순 수익률 / 기간)
+                        annualized_return = profit_pct_float / duration_years
+                        
+                        # 5. 데이터 추가
+                        data['trading_duration_years'] = f"{duration_years:.1f}년"
+                        data['annualized_return_pct'] = f"{annualized_return:.2f}%"
+
+                except Exception as e:
+                    print(f"  [오류] 날짜 또는 수익률 계산 중 오류 발생: {e}")
+                    data['trading_duration_years'] = "계산 오류"
+                    data['annualized_return_pct'] = "계산 오류"
+                # --- ⬆️ 계산 로직 완료 ⬆️ ---
+
                 collected_data.append(data)
                 print(f"  [성공] 데이터: {data}")
-                last_profit_pct = data['profit_pct'] # [수정] 새 값을 기억
+                last_profit_pct = data['profit_pct'] # 새 값을 기억
             else:
                 print(f"  [정보] 심볼 [{current_symbol}]의 전략 데이터가 없습니다 (N/A).")
-                last_profit_pct = "N/A" # [수정] 실패/N/A일 경우, 다음 루프를 위해 값을 리셋
+                last_profit_pct = "N/A" # 실패/N/A일 경우, 다음 루프를 위해 값을 리셋
 
             # (C) 다음 심볼로 이동 (데이터 수집 성공/실패와 무관하게)
             print("  (C) 다음 심볼로 이동합니다.")

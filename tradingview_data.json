@@ -1,116 +1,135 @@
 [
   {
     "profit_pct": "+16.27%",
-    "profit_factor": "1,109,114.92",
     "trade_1_entry": "2013년 10월 30일",
-    "symbol": "181710"
+    "symbol": "181710",
+    "trading_duration_years": "12.0년",
+    "annualized_return_pct": "1.35%"
   },
   {
     "profit_pct": "+56.04%",
-    "profit_factor": "1,882,078.56",
     "trade_1_entry": "2016년 1월 07일",
-    "symbol": "222080"
+    "symbol": "222080",
+    "trading_duration_years": "9.9년",
+    "annualized_return_pct": "5.68%"
   },
   {
     "profit_pct": "+46.08%",
-    "profit_factor": "2,971,427.75",
     "trade_1_entry": "2004년 7월 21일",
-    "symbol": "000640"
+    "symbol": "000640",
+    "trading_duration_years": "21.3년",
+    "annualized_return_pct": "2.16%"
   },
   {
     "profit_pct": "−69.38%",
-    "profit_factor": "1,419,191.33",
     "trade_1_entry": "2016년 12월 01일",
-    "symbol": "241590"
+    "symbol": "241590",
+    "trading_duration_years": "계산 오류",
+    "annualized_return_pct": "계산 오류"
   },
   {
     "profit_pct": "+214.30%",
-    "profit_factor": "1,176,689.66",
     "trade_1_entry": "2008년 3월 31일",
-    "symbol": "100840"
+    "symbol": "100840",
+    "trading_duration_years": "17.6년",
+    "annualized_return_pct": "12.15%"
   },
   {
     "profit_pct": "+229.65%",
-    "profit_factor": "4,045,447.41",
     "trade_1_entry": "2004년 3월 02일",
-    "symbol": "005690"
+    "symbol": "005690",
+    "trading_duration_years": "21.7년",
+    "annualized_return_pct": "10.58%"
   },
   {
     "profit_pct": "+223.08%",
-    "profit_factor": "3,230,401.25",
     "trade_1_entry": "2004년 3월 11일",
-    "symbol": "003240"
+    "symbol": "003240",
+    "trading_duration_years": "21.7년",
+    "annualized_return_pct": "10.29%"
   },
   {
     "profit_pct": "+23.48%",
-    "profit_factor": "1,472,285.79",
     "trade_1_entry": "2021년 7월 01일",
-    "symbol": "383310"
+    "symbol": "383310",
+    "trading_duration_years": "4.4년",
+    "annualized_return_pct": "5.36%"
   },
   {
     "profit_pct": "+573.88%",
-    "profit_factor": "1,398,044.35",
     "trade_1_entry": "2020년 4월 28일",
-    "symbol": "336570"
+    "symbol": "336570",
+    "trading_duration_years": "5.6년",
+    "annualized_return_pct": "103.31%"
   },
   {
     "profit_pct": "+132.07%",
-    "profit_factor": "1,469,804.60",
     "trade_1_entry": "2004년 2월 24일",
-    "symbol": "064960"
+    "symbol": "064960",
+    "trading_duration_years": "21.7년",
+    "annualized_return_pct": "6.08%"
   },
   {
     "profit_pct": "−23.76%",
-    "profit_factor": "530,916.63",
     "trade_1_entry": "2010년 12월 20일",
-    "symbol": "057050"
+    "symbol": "057050",
+    "trading_duration_years": "계산 오류",
+    "annualized_return_pct": "계산 오류"
   },
   {
     "profit_pct": "−30.85%",
-    "profit_factor": "507,017.04",
     "trade_1_entry": "2024년 3월 20일",
-    "symbol": "460930"
+    "symbol": "460930",
+    "trading_duration_years": "계산 오류",
+    "annualized_return_pct": "계산 오류"
   },
   {
     "profit_pct": "+77.75%",
-    "profit_factor": "71,502.75",
     "trade_1_entry": "2025년 4월 11일",
-    "symbol": "484870"
+    "symbol": "484870",
+    "trading_duration_years": "0.6년",
+    "annualized_return_pct": "129.08%"
   },
   {
     "profit_pct": "+526.43%",
-    "profit_factor": "3,737,262.69",
     "trade_1_entry": "2013년 12월 17일",
-    "symbol": "131970"
+    "symbol": "131970",
+    "trading_duration_years": "11.9년",
+    "annualized_return_pct": "44.17%"
   },
   {
     "profit_pct": "+17.69%",
-    "profit_factor": "1,058,181.23",
     "trade_1_entry": "2017년 6월 01일",
-    "symbol": "145720"
+    "symbol": "145720",
+    "trading_duration_years": "8.5년",
+    "annualized_return_pct": "2.09%"
   },
   {
     "profit_pct": "−1.58%",
-    "profit_factor": "859,848.20",
     "trade_1_entry": "2017년 8월 23일",
-    "symbol": "166090"
+    "symbol": "166090",
+    "trading_duration_years": "계산 오류",
+    "annualized_return_pct": "계산 오류"
   },
   {
     "profit_pct": "+392.73%",
-    "profit_factor": "586,233.82",
     "trade_1_entry": "2010년 6월 07일",
-    "symbol": "071320"
+    "symbol": "071320",
+    "trading_duration_years": "15.4년",
+    "annualized_return_pct": "25.42%"
   },
   {
     "profit_pct": "−47.34%",
-    "profit_factor": "592,097.13",
     "trade_1_entry": "2017년 8월 22일",
-    "symbol": "272290"
+    "symbol": "272290",
+    "trading_duration_years": "계산 오류",
+    "annualized_return_pct": "계산 오류"
   },
   {
     "profit_pct": "−54.96%",
-    "profit_factor": "610,671.24",
     "trade_1_entry": "2015년 12월 22일",
-    "symbol": "089590"
+    "symbol": "089590",
+    "trading_duration_years": "계산 오류",
+    "annualized_return_pct": "계산 오류"
   }
 ]
