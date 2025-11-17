@@ -1,6 +1,7 @@
 import time
 import json
-from datetime import datetime  # 날짜 계산을 위해 import
+import pandas as pd  # 엑셀 저장을 위해 추가
+from datetime import datetime
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -232,11 +233,44 @@ def main():
     driver.quit()
     
     print("\n--- 🏁 최종 수집 데이터 ---")
+    # 터미널에도 보기 좋게 출력 (JSON 형식)
     print(json.dumps(collected_data, indent=2, ensure_ascii=False))
 
-    with open('tradingview_data.json', 'w', encoding='utf-8') as f:
-        json.dump(collected_data, f, indent=2, ensure_ascii=False)
-    print("\n'tradingview_data.json' 파일로 저장 완료.")
+    # --- ⬇️ [수정] 엑셀 파일로 저장 ⬇️ ---
+    if collected_data:
+        print("\n데이터를 엑셀 파일로 저장 중...")
+        try:
+            # 1. 데이터를 Pandas DataFrame으로 변환
+            df = pd.DataFrame(collected_data)
+            
+            # 2. (선택) 컬럼 순서 지정
+            # 원하는 순서대로 정렬 (없으면 원본 딕셔너리 순서)
+            columns_order = [
+                'symbol', 
+                'profit_pct', 
+                'trade_1_entry', 
+                'trading_duration_years', 
+                'annualized_return_pct'
+            ]
+            # data에 없는 컬럼이 있을 수 있으니, 실제 존재하는 컬럼만 필터링
+            final_columns = [col for col in columns_order if col in df.columns]
+            df = df[final_columns]
+
+            # 3. 엑셀 파일로 저장
+            output_filename = 'tradingview_data.xlsx'
+            df.to_excel(output_filename, index=False, engine='openpyxl')
+            print(f"'{output_filename}' 파일로 저장 완료.")
+            
+        except Exception as e:
+            print(f"[오류] 엑셀 저장 중 오류 발생: {e}")
+            print("JSON으로 대신 저장합니다.")
+            # 엑셀 저장이 실패할 경우를 대비해 JSON으로 백업 저장
+            with open('tradingview_data_backup.json', 'w', encoding='utf-8') as f:
+                json.dump(collected_data, f, indent=2, ensure_ascii=False)
+
+    else:
+        print("\n수집된 데이터가 없어 엑셀 파일을 저장하지 않았습니다.")
+    # --- ⬆️ 엑셀 저장 완료 ⬆️ ---
 
 
 if __name__ == "__main__":
