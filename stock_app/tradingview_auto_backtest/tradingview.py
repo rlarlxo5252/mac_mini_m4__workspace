@@ -179,13 +179,17 @@ def main():
             if data:
                 data['symbol'] = current_symbol
 
-                # --- ⬇️ [수정] 계산 로직 추가 ⬇️ ---
+                # --- ⬇️ [수정] 계산 로직 (기하 평균 추가) ⬇️ ---
+                data['trading_duration_years'] = "N/A" # 기본값을 N/A로 설정
+                data['simple_avg_return_pct'] = "N/A" # (이름 변경) 연평균 단순 수익률
+                data['cagr_pct'] = "N/A"               # (신규 추가) 연복리 수익률 (기하 평균)
+                
                 try:
-                    # 1. 수익률 파싱
+                    # 1. 수익률 파싱 (N/A 확인)
                     profit_pct_str = data['profit_pct']
                     profit_pct_float = float(profit_pct_str.replace('+', '').replace(',', '').replace('%', ''))
 
-                    # 2. 시작 날짜 파싱
+                    # 2. 시작 날짜 파싱 (N/A 확인)
                     start_date_str = data['trade_1_entry'] # "1991년 5월 03일"
                     start_date_obj = datetime.strptime(start_date_str, '%Y년 %m월 %d일')
 
@@ -195,19 +199,34 @@ def main():
 
                     if duration_years <= 0:
                         data['trading_duration_years'] = "0.0년"
-                        data['annualized_return_pct'] = "N/A"
                     else:
-                        # 4. 연평균 수익률 계산 (단순 수익률 / 기간)
-                        annualized_return = profit_pct_float / duration_years
-                        
-                        # 5. 데이터 추가
                         data['trading_duration_years'] = f"{duration_years:.1f}년"
-                        data['annualized_return_pct'] = f"{annualized_return:.2f}%"
 
+                        # 4. 연평균 단순 수익률 계산 (기존)
+                        simple_avg_return = profit_pct_float / duration_years
+                        data['simple_avg_return_pct'] = f"{simple_avg_return:.2f}%"
+                        
+                        # 5. 연복리 수익률 (CAGR, 기하 평균) 계산 (신규)
+                        total_return_decimal = profit_pct_float / 100
+                        ending_ratio = 1 + total_return_decimal
+                        
+                        if ending_ratio <= 0:
+                            # 100% 이상 손실 시 기하 평균 계산 불가
+                            data['cagr_pct'] = "N/A (손실)"
+                        else:
+                            cagr = (ending_ratio ** (1 / duration_years)) - 1
+                            data['cagr_pct'] = f"{cagr * 100:.2f}%"
+
+                except ValueError as e:
+                    # 파싱 실패 (값이 'N/A' 또는 '-' 등)
+                    print(f"    [정보] 수익률/날짜 파싱 실패. 계산을 건너뜁니다. (값: {profit_pct_str}, {start_date_str})")
+                    # data의 값은 "N/A"로 유지됨
                 except Exception as e:
-                    print(f"  [오류] 날짜 또는 수익률 계산 중 오류 발생: {e}")
+                    # 기타 예외
+                    print(f"    [오류] 계산 중 알 수 없는 오류: {e}")
                     data['trading_duration_years'] = "계산 오류"
-                    data['annualized_return_pct'] = "계산 오류"
+                    data['simple_avg_return_pct'] = "계산 오류"
+                    data['cagr_pct'] = "계산 오류"
                 # --- ⬆️ 계산 로직 완료 ⬆️ ---
 
                 collected_data.append(data)
@@ -244,13 +263,13 @@ def main():
             df = pd.DataFrame(collected_data)
             
             # 2. (선택) 컬럼 순서 지정
-            # 원하는 순서대로 정렬 (없으면 원본 딕셔너리 순서)
             columns_order = [
                 'symbol', 
                 'profit_pct', 
                 'trade_1_entry', 
                 'trading_duration_years', 
-                'annualized_return_pct'
+                'simple_avg_return_pct',  # 이름 변경
+                'cagr_pct'                  # 신규 추가
             ]
             # data에 없는 컬럼이 있을 수 있으니, 실제 존재하는 컬럼만 필터링
             final_columns = [col for col in columns_order if col in df.columns]
