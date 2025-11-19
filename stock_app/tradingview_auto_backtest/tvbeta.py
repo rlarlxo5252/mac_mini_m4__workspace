@@ -26,9 +26,9 @@ TRADE_ANALYSIS_TAB_XPATH = "//button[@data-overflow-tooltip-text='거래 분석'
 RISK_RATIOS_TAB_XPATH = "//button[@data-overflow-tooltip-text='위험/성과 비율']"
 
 # 3. 추가 데이터 앵커 (TR/Row 기반, 최종 교정됨)
-# [수정] 성과 탭 데이터 - 퍼센트 값을 포함한 셀 내부에서 찾도록 수정
-NET_PROFIT_ANCHOR_XPATH = "//tr[.//div[contains(text(), '순이익')]]//div[starts-with(@class, 'percentValue-')][1]"
-BUY_HOLD_RETURN_ANCHOR_XPATH = "//tr[.//div[contains(text(), '매수 후 보유 수익')]]//div[starts-with(@class, 'percentValue-')][1]"
+# [수정] 성과 탭 데이터 - 퍼센트 값만 정확히 추출
+NET_PROFIT_ANCHOR_XPATH = "//tr[.//div[contains(text(), '순이익')]]//div[starts-with(@class, 'percentValue-')]"
+BUY_HOLD_RETURN_ANCHOR_XPATH = "//tr[.//div[contains(text(), '매수 후 보유 수익')]]//div[starts-with(@class, 'percentValue-')]"
 
 # 거래 분석 탭 데이터
 WIN_RATE_ANCHOR_XPATH = "//tr[.//div[contains(text(), '승률')]]//div[starts-with(@class, 'value-') and contains(text(), '%')]"
@@ -63,12 +63,26 @@ class text_to_be_different_from:
 
 
 def parse_profit_string(profit_str):
-    """퍼센트 문자열에서 쉼표(,)와 퍼센트(%)를 제거하고 float으로 변환."""
-    if not profit_str or profit_str in ['N/A', '-', 'Scrape Fail', '—']:  # '—' 추가
+    """퍼센트 문자열에서 퍼센트 값만 추출하고 float으로 변환."""
+    if not profit_str or profit_str in ['N/A', 'Scrape Fail', '—']:
         return None
     
-    # 쉼표와 퍼센트 제거 후 공백 제거
-    clean_str = profit_str.replace(',', '').replace('%', '').strip()
+    # % 기호가 있는 부분만 추출 (정규식 사용)
+    import re
+    # 패턴: 숫자(음수 포함), 쉼표, 소수점을 포함하고 % 기호로 끝나는 부분
+    match = re.search(r'[+\-−]?[\d,]+\.?\d*%', profit_str)
+    
+    if not match:
+        return None
+    
+    percent_part = match.group()
+    
+    # 쉼표, 퍼센트, + 기호 제거, − (마이너스 유니코드)를 - 로 변환
+    clean_str = percent_part.replace(',', '').replace('%', '').replace('+', '').replace('−', '-').strip()
+    
+    # 빈 문자열이나 '-'만 있는 경우 처리
+    if not clean_str or clean_str == '-':
+        return None
     
     try:
         return float(clean_str)
@@ -319,14 +333,27 @@ def main():
                 
                 try:
                     # 1. 알파/베타 구분 (순이익 vs 매수 후 보유 수익)
-                    net_profit_float = parse_profit_string(data.get('net_profit', 'N/A')) 
-                    buy_hold_float = parse_profit_string(data.get('buy_hold_return', 'N/A'))
+                    net_profit_str = data.get('net_profit', 'N/A')
+                    buy_hold_str = data.get('buy_hold_return', 'N/A')
+                    
+                    print(f"    [디버그] 순이익 원본: '{net_profit_str}'")
+                    print(f"    [디버그] 매수후보유 원본: '{buy_hold_str}'")
+                    
+                    net_profit_float = parse_profit_string(net_profit_str) 
+                    buy_hold_float = parse_profit_string(buy_hold_str)
+                    
+                    print(f"    [디버그] 순이익 파싱: {net_profit_float}")
+                    print(f"    [디버그] 매수후보유 파싱: {buy_hold_float}")
                     
                     if net_profit_float is not None and buy_hold_float is not None:
                         if net_profit_float > buy_hold_float:
                             data['alpha_beta_status'] = "알파(α)"
+                            print(f"    [디버그] 결과: 알파 (순이익 {net_profit_float} > 매수후보유 {buy_hold_float})")
                         else:
                             data['alpha_beta_status'] = "베타(β)"
+                            print(f"    [디버그] 결과: 베타 (순이익 {net_profit_float} <= 매수후보유 {buy_hold_float})")
+                    else:
+                        print(f"    [디버그] 파싱 실패로 알파/베타 판별 불가")
                     
                     # 2. 거래 기간 및 수익률 계산 (총손익률 기준)
                     profit_pct_str = data['profit_pct']
