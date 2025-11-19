@@ -10,18 +10,18 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, NoSuchElementException, StaleElementReferenceException
 from webdriver_manager.chrome import ChromeDriverManager
 
-# --- ⬇️ XPath 변수 (수익지수 제거됨) ⬇️ ---
+# --- ⬇️ XPath 변수 (모두 검증 완료) ⬇️ ---
 
-# 1. '총손익률 %' 값 (검증 완료)
+# 1. '총손익률 %' 값
 PROFIT_PCT_XPATH = "//div[starts-with(@class, 'reportContainerOld-')]//div[starts-with(@class, 'change-') and contains(text(), '%')]"
 # 2. '수익지수' (제거됨)
-# 3. '거래 목록' 탭 버튼 (검증 완료)
+# 3. '거래 목록' 탭 버튼
 TRADE_LIST_TAB_XPATH = "//button[@data-overflow-tooltip-text='거래목록']"
-# 4. '개요' 탭 버튼 (검증 완료)
+# 4. '개요' 탭 버튼
 OVERVIEW_TAB_XPATH = "//button[@data-overflow-tooltip-text='오버뷰']"
-# 5. '1번 거래 진입 시점' (검증 완료)
+# 5. '1번 거래 진입 시점'
 TRADE_1_ENTRY_XPATH = "//tr[@data='1']/td[4]//div[@data-part='1']"
-# 6. '현재 심볼 이름' (검증 완료)
+# 6. '현재 심볼 이름'
 SYMBOL_NAME_XPATH = "//button[@id='header-toolbar-symbol-search']//div[contains(@class, 'js-button-text')]"
 # --- ⬆️ 여기까지 XPath 변수 ⬆️ ---
 
@@ -53,7 +53,7 @@ class text_to_be_different_from:
 
 def get_strategy_data(driver, wait, previous_profit_pct):
     """
-    현재 차트의 전략 테스터에서 데이터를 스크래핑합니다. (수익지수 제거됨)
+    현재 차트의 전략 테스터에서 데이터를 스크래핑합니다.
     """
     data = {}
     try:
@@ -64,6 +64,7 @@ def get_strategy_data(driver, wait, previous_profit_pct):
 
         # 0.5. '총손익률' 값이 이전 값과 달라질 때까지 대기
         print("    (0.5/5) '전략 데이터' 로딩 대기중... (값이 바뀔 때까지)")
+        # 이전 심볼의 값과 달라질 때까지 기다려야 새로운 백테스트 결과가 반영됩니다.
         wait.until(
             text_to_be_different_from((By.XPATH, PROFIT_PCT_XPATH), previous_profit_pct)
         )
@@ -76,8 +77,6 @@ def get_strategy_data(driver, wait, previous_profit_pct):
         )
         data['profit_pct'] = profit_pct_element.text
         print(f"        -> 찾음: {data['profit_pct']}")
-
-        # (2/6) '수익지수' 단계 제거됨
 
         # 2. '거래목록' 탭 클릭
         print("    (2/5) '거래 목록' 탭 클릭 시도...")
@@ -108,7 +107,7 @@ def get_strategy_data(driver, wait, previous_profit_pct):
         return None
 
 def main():
-    # --- ⬇️ [수정] 심볼 개수 입력받기 ⬇️ ---
+    # --- ⬇️ 심볼 개수 입력받기 ⬇️ ---
     while True:
         try:
             TOTAL_SYMBOLS_TO_SCRAPE = int(input("수집할 심볼 개수를 입력하세요 (예: 10): "))
@@ -119,7 +118,7 @@ def main():
         except ValueError:
             print("오류: 유효한 숫자를 입력하세요.")
             
-    # --- ⬇️ [수정] 기준일 입력받기 ⬇️ ---
+    # --- ⬇️ 기준일 입력받기 ⬇️ ---
     today_str = datetime.now().strftime('%Y-%m-%d')
     while True:
         end_date_input = input(f"기준일(YYYY-MM-DD)을 입력하세요 (기본값: {today_str}): ")
@@ -133,6 +132,7 @@ def main():
             print("오류: YYYY-MM-DD 형식이 아닙니다. 다시 입력하세요.")
     
     print(f"기준일이 {end_date_obj.strftime('%Y-%m-%d')}로 설정되었습니다.")
+    
     # --- ⬆️ 입력받기 완료 ⬆️ ---
 
     driver = webdriver.Chrome(service=webdriver.chrome.service.Service(ChromeDriverManager().install()))
@@ -142,10 +142,20 @@ def main():
     chart_url = "https://www.tradingview.com/chart/" 
     driver.get(chart_url)
 
-    print(f"브라우저에서 로그인 및 차트 로드를 60초간 기다립니다...")
-    print("60초 이내에 [로그인], [관심종목], [전략 테스터]를 모두 수동으로 열어주세요.")
-    time.sleep(60) 
+    # --- ⬇️ [핵심 수정] 무기한 대기 및 'now' 입력 시 시작 ⬇️ ---
+    print(f"\n--- [SETUP MODE] ---")
+    print(f"브라우저가 열렸습니다. 트레이딩뷰에서 다음 작업을 수동으로 완료해주세요:")
+    print("1. 로그인 (Login)")
+    print("2. 관심종목 목록 열기")
+    print("3. 전략 테스터 열기")
+    print("\n✅ 준비가 완료되면, **터미널에 'now'를 입력**하세요.")
+    
+    # 'now'가 입력될 때까지 무기한으로 대기
+    while input().strip().lower() != 'now':
+        print("잘못된 입력입니다. 'now'를 입력하여 계속하세요.")
+    
     print("자동화를 시작합니다.")
+    # --- ⬆️ 최종 수정된 대기 로직 ⬆️ ---
 
     collected_data = []
     current_symbol = ""
@@ -179,13 +189,17 @@ def main():
             if data:
                 data['symbol'] = current_symbol
 
-                # --- ⬇️ [수정] 계산 로직 추가 ⬇️ ---
+                # --- ⬇️ 계산 로직 (기하 평균 추가) ⬇️ ---
+                data['trading_duration_years'] = "N/A" # 기본값을 N/A로 설정
+                data['simple_avg_return_pct'] = "N/A" # (이름 변경) 연평균 단순 수익률
+                data['cagr_pct'] = "N/A"               # (신규 추가) 연복리 수익률 (기하 평균)
+                
                 try:
-                    # 1. 수익률 파싱
+                    # 1. 수익률 파싱 (N/A 확인)
                     profit_pct_str = data['profit_pct']
                     profit_pct_float = float(profit_pct_str.replace('+', '').replace(',', '').replace('%', ''))
 
-                    # 2. 시작 날짜 파싱
+                    # 2. 시작 날짜 파싱 (N/A 확인)
                     start_date_str = data['trade_1_entry'] # "1991년 5월 03일"
                     start_date_obj = datetime.strptime(start_date_str, '%Y년 %m월 %d일')
 
@@ -195,19 +209,34 @@ def main():
 
                     if duration_years <= 0:
                         data['trading_duration_years'] = "0.0년"
-                        data['annualized_return_pct'] = "N/A"
                     else:
-                        # 4. 연평균 수익률 계산 (단순 수익률 / 기간)
-                        annualized_return = profit_pct_float / duration_years
-                        
-                        # 5. 데이터 추가
                         data['trading_duration_years'] = f"{duration_years:.1f}년"
-                        data['annualized_return_pct'] = f"{annualized_return:.2f}%"
 
+                        # 4. 연평균 단순 수익률 계산 (기존)
+                        simple_avg_return = profit_pct_float / duration_years
+                        data['simple_avg_return_pct'] = f"{simple_avg_return:.2f}%"
+                        
+                        # 5. 연복리 수익률 (CAGR, 기하 평균) 계산 (신규)
+                        total_return_decimal = profit_pct_float / 100
+                        ending_ratio = 1 + total_return_decimal
+                        
+                        if ending_ratio <= 0:
+                            # 100% 이상 손실 시 기하 평균 계산 불가
+                            data['cagr_pct'] = "N/A (손실)"
+                        else:
+                            cagr = (ending_ratio ** (1 / duration_years)) - 1
+                            data['cagr_pct'] = f"{cagr * 100:.2f}%"
+
+                except ValueError as e:
+                    # 파싱 실패 (값이 'N/A' 또는 '-' 등)
+                    print(f"    [정보] 수익률/날짜 파싱 실패. 계산을 건너뜁니다. (값: {profit_pct_str}, {start_date_str})")
+                    # data의 값은 "N/A"로 유지됨
                 except Exception as e:
-                    print(f"  [오류] 날짜 또는 수익률 계산 중 오류 발생: {e}")
+                    # 기타 예외
+                    print(f"    [오류] 계산 중 알 수 없는 오류: {e}")
                     data['trading_duration_years'] = "계산 오류"
-                    data['annualized_return_pct'] = "계산 오류"
+                    data['simple_avg_return_pct'] = "계산 오류"
+                    data['cagr_pct'] = "계산 오류"
                 # --- ⬆️ 계산 로직 완료 ⬆️ ---
 
                 collected_data.append(data)
@@ -236,7 +265,7 @@ def main():
     # 터미널에도 보기 좋게 출력 (JSON 형식)
     print(json.dumps(collected_data, indent=2, ensure_ascii=False))
 
-    # --- ⬇️ [수정] 엑셀 파일로 저장 ⬇️ ---
+    # --- ⬇️ 엑셀 파일로 저장 ⬇️ ---
     if collected_data:
         print("\n데이터를 엑셀 파일로 저장 중...")
         try:
@@ -244,13 +273,13 @@ def main():
             df = pd.DataFrame(collected_data)
             
             # 2. (선택) 컬럼 순서 지정
-            # 원하는 순서대로 정렬 (없으면 원본 딕셔너리 순서)
             columns_order = [
                 'symbol', 
                 'profit_pct', 
                 'trade_1_entry', 
                 'trading_duration_years', 
-                'annualized_return_pct'
+                'simple_avg_return_pct',  # 이름 변경
+                'cagr_pct'                  # 신규 추가
             ]
             # data에 없는 컬럼이 있을 수 있으니, 실제 존재하는 컬럼만 필터링
             final_columns = [col for col in columns_order if col in df.columns]

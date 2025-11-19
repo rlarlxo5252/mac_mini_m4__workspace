@@ -1,0 +1,28 @@
+-- ========================================================
+--
+-- List tables
+--
+-- ========================================================
+
+show tables;
+
+
+
+-- ========================================================
+--
+-- List Indexes
+--
+-- ========================================================
+
+SELECT
+   TABLE_SCHEMA
+  ,TABLE_NAME
+  ,INDEX_NAME
+  ,COLUMN_NAME
+  ,NON_UNIQUE
+  ,INDEX_TYPE
+  FROM information_schema.STATISTICS
+    where TABLE_SCHEMA = DATABASE();
+
+
+
