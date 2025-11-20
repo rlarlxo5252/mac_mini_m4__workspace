@@ -2,42 +2,42 @@ import time
 import json
 import pandas as pd
 from datetime import datetime
-import re # 정규식 모듈 명시적 추가
-
-# 셀레니움 관련 임포트
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, NoSuchElementException, StaleElementReferenceException
+from selenium.webdriver.common.action_chains import ActionChains
 from webdriver_manager.chrome import ChromeDriverManager
-
-# 엑셀 스타일링을 위한 임포트 (openpyxl)
-from openpyxl.styles import Font, PatternFill, Alignment
-from openpyxl.utils import get_column_letter
 
 # ==================================================================================
 # [SECTION 1] 핵심 시스템 (Core System) - 수정 주의
+# 설명: 전략 테스터의 데이터를 수집하는 핵심 로직입니다. 이 영역의 XPath나 로직은 충돌 방지를 위해 보존합니다.
 # ==================================================================================
 
 # --- ⬇️ Core XPath 변수 ⬇️ ---
+# 1. 메인 탭 및 버튼
 PROFIT_PCT_XPATH = "//div[starts-with(@class, 'reportContainerOld-')]//div[starts-with(@class, 'change-') and contains(text(), '%')]"
 TRADE_LIST_TAB_XPATH = "//button[@data-overflow-tooltip-text='거래목록']"
 OVERVIEW_TAB_XPATH = "//button[@data-overflow-tooltip-text='오버뷰']"
 SYMBOL_NAME_XPATH = "//button[@id='header-toolbar-symbol-search']//div[contains(@class, 'js-button-text')]"
 TRADE_1_ENTRY_XPATH = "//tr[@data='1']/td[4]//div[@data-part='1']"
 
+# 2. 추가 탭 버튼
 PERFORMANCE_TAB_XPATH = "//button[@data-overflow-tooltip-text='성과']"
 TRADE_ANALYSIS_TAB_XPATH = "//button[@data-overflow-tooltip-text='거래 분석']"
 RISK_RATIOS_TAB_XPATH = "//button[@data-overflow-tooltip-text='위험/성과 비율']"
 
+# 3. 추가 데이터 앵커
 NET_PROFIT_ANCHOR_XPATH = "//tr[.//div[contains(text(), '순이익')]]//div[starts-with(@class, 'percentValue-')]"
 BUY_HOLD_RETURN_ANCHOR_XPATH = "//tr[.//div[contains(text(), '매수 후 보유 수익')]]//div[starts-with(@class, 'percentValue-')]"
 
+# 거래 분석 탭 데이터
 WIN_RATE_ANCHOR_XPATH = "//tr[.//div[contains(text(), '승률')]]//div[starts-with(@class, 'value-') and contains(text(), '%')]"
 MAX_LOSS_ANCHOR_XPATH = "//tr[.//div[contains(text(), '최대 손실 거래')]]//div[starts-with(@class, 'value-') and contains(text(), '%')]"
 
+# 위험/성과 비율 탭 데이터
 PROFIT_FACTOR_ANCHOR_XPATH = "//tr[.//div[contains(text(), '수익지수')]]//div[starts-with(@class, 'value-') and not(contains(text(), '%'))]"
 SHARPE_RATIO_ANCHOR_XPATH = "//tr[.//div[contains(text(), '샤프 레이쇼')]]//div[starts-with(@class, 'value-') and not(contains(text(), '%'))]"
 SORTINO_RATIO_ANCHOR_XPATH = "//tr[.//div[contains(text(), '소티노 레이쇼')]]//div[starts-with(@class, 'value-') and not(contains(text(), '%'))]"
@@ -45,6 +45,7 @@ SORTINO_RATIO_ANCHOR_XPATH = "//tr[.//div[contains(text(), '소티노 레이쇼'
 
 # --- ⬇️ Core Helper Classes & Functions ⬇️ ---
 class text_to_be_different_from:
+    """텍스트가 변경될 때까지 대기하는 커스텀 조건"""
     def __init__(self, locator, text_):
         self.locator = locator
         self.text = text_
@@ -59,8 +60,10 @@ class text_to_be_different_from:
             return False
 
 def parse_profit_string(profit_str):
+    """퍼센트 문자열 파싱"""
     if not profit_str or profit_str in ['N/A', 'Scrape Fail', '—']:
         return None
+    import re
     match = re.search(r'[+\-−]?[\d,]+\.?\d*%', profit_str)
     if not match:
         return None
@@ -74,6 +77,7 @@ def parse_profit_string(profit_str):
         return None 
 
 def scrape_performance(driver, wait, data):
+    """'성과' 탭 스크래핑"""
     print("    [Sub] '성과' 탭 클릭 시도...")
     wait.until(EC.element_to_be_clickable((By.XPATH, PERFORMANCE_TAB_XPATH))).click()
     try:
@@ -95,6 +99,7 @@ def scrape_performance(driver, wait, data):
     return data
 
 def scrape_trade_analysis(driver, wait, data):
+    """'거래 분석' 탭 스크래핑"""
     print("    [Sub] '거래 분석' 탭 클릭 시도...")
     wait.until(EC.element_to_be_clickable((By.XPATH, TRADE_ANALYSIS_TAB_XPATH))).click()
     try:
@@ -116,6 +121,7 @@ def scrape_trade_analysis(driver, wait, data):
     return data
 
 def scrape_risk_ratios(driver, wait, data):
+    """'위험/성과 비율' 탭 스크래핑"""
     print("    [Sub] '위험/성과 비율' 탭 클릭 시도...")
     wait.until(EC.element_to_be_clickable((By.XPATH, RISK_RATIOS_TAB_XPATH))).click()
     try:
@@ -144,6 +150,7 @@ def scrape_risk_ratios(driver, wait, data):
     return data
 
 def get_strategy_data(driver, wait, previous_profit_pct):
+    """전략 데이터 수집 메인 함수 (Core)"""
     data = {}
     try:
         print("    (0/10) '개요' 탭 클릭 시도...")
@@ -188,19 +195,29 @@ def get_strategy_data(driver, wait, previous_profit_pct):
         return data if data else None
 
 # ==================================================================================
-# [SECTION 2] 확장 기능 (Extensions)
+# [SECTION 2] 확장 기능 (Extensions) - 사용자 정의 기능
+# 설명: 왓치리스트, 우측 패널 정보 수집 등 사용자의 요청에 의해 추가된 기능들입니다.
 # ==================================================================================
 
+# --- ⬇️ Extension XPath ⬇️ ---
 WATCHLIST_TITLE_XPATH = "//div[contains(@class, 'widgetbar-widget-watchlist')]//span[contains(@class, 'titleRow-')]"
 DETAILS_FULL_NAME_XPATH = "//a[@data-qa-id='details-element description']"
 DETAILS_EXCHANGE_XPATH = "//span[@data-qa-id='details-element exchange']"
 DETAILS_PERF_CONTAINER_XPATH = "//div[@data-qa-id='details-element performance']"
 
+# --- ⬇️ Extension Functions ⬇️ ---
 def scrape_symbol_details(driver, wait, target_periods):
-    details = {'full_name': 'N/A', 'exchange': 'N/A'}
+    """
+    [확장 기능] 우측 패널에서 종목 풀네임, 거래소, 선택된 기간별 수익률을 수집합니다.
+    """
+    details = {
+        'full_name': 'N/A', 
+        'exchange': 'N/A',
+    }
     for p in target_periods:
         details[f'return_{p}'] = 'N/A'
     
+    # 1. 기본 정보 (Full Name, Exchange)
     try:
         full_name_el = wait.until(EC.visibility_of_element_located((By.XPATH, DETAILS_FULL_NAME_XPATH)))
         details['full_name'] = full_name_el.text
@@ -209,111 +226,34 @@ def scrape_symbol_details(driver, wait, target_periods):
     except Exception as e:
         print(f"      [오류] 이름/거래소 수집 실패: {e}")
 
+    # 2. 기간별 수익률 (Stocks vs ETP)
     try:
         print("      [상세정보] 기간별 수익률 스캔 중...")
+        # 컨테이너 로딩 확인
         wait.until(EC.presence_of_element_located((By.XPATH, DETAILS_PERF_CONTAINER_XPATH)))
+        
         for period in target_periods:
             xpath = f"//div[@data-qa-id='details-element performance']//span[text()='{period}']/preceding-sibling::span"
             try:
                 val_element = driver.find_element(By.XPATH, xpath)
                 details[f'return_{period}'] = val_element.text
             except NoSuchElementException:
-                pass 
+                pass # N/A 유지
+                
         if target_periods:
             print(f"      [완료] 수익률 수집 완료")
+        
     except Exception as e:
         print(f"      [오류] 수익률 섹션 접근 실패: {e}")
+        
     return details
 
-# --- ⬇️ [NEW] 엑셀 스타일링 함수 (Color Edition 핵심) ⬇️ ---
-def style_excel_file(filename):
-    """
-    저장된 엑셀 파일을 불러와서 스타일(글자색, 배경색)을 적용합니다.
-    """
-    print("\n🎨 [Color Mode] 엑셀 스타일링 적용 중...")
-    from openpyxl import load_workbook
-    
-    try:
-        wb = load_workbook(filename)
-        ws = wb.active
-        
-        # 1. 스타일 정의
-        # 빨강/파랑 폰트 (Bold 옵션 추가)
-        red_font = Font(color="FF0000", bold=True)   # 양수: 빨강
-        blue_font = Font(color="0000FF", bold=True)  # 음수: 파랑
-        
-        # 배경색 정의
-        alpha_fill = PatternFill(start_color="FFE699", end_color="FFE699", fill_type="solid") # 연한 주황/금색 (Alpha)
-        beta_fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")  # 연한 회색 (Beta)
-        header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid") # 헤더 (파랑 계열)
-        header_font = Font(color="FFFFFF", bold=True) # 헤더 글자 (흰색)
-
-        # 2. 헤더 스타일 적용 (1행)
-        for cell in ws[1]:
-            cell.fill = header_fill
-            cell.font = header_font
-            cell.alignment = Alignment(horizontal="center", vertical="center")
-
-        # 3. 데이터 순회 및 스타일 적용 (2행부터)
-        # 컬럼 인덱스 찾기 (이름으로 찾기 위해)
-        headers = {cell.value: i+1 for i, cell in enumerate(ws[1])}
-        
-        # 수익률 관련 컬럼 키워드 (글자색 적용 대상)
-        # %가 들어가거나 수익률, CAGR 등의 단어가 포함된 컬럼
-        profit_keywords = ['%', '수익', 'CAGR', '손실'] 
-        
-        alpha_col_idx = headers.get('수익기준(Alpha/Beta)')
-        
-        for row in ws.iter_rows(min_row=2):
-            # (A) 알파/베타 배경색 적용 (해당 칸만 색칠)
-            if alpha_col_idx:
-                cell = row[alpha_col_idx - 1] # 0-based index 보정
-                if cell.value and "알파" in str(cell.value):
-                    cell.fill = alpha_fill
-                elif cell.value and "베타" in str(cell.value):
-                    cell.fill = beta_fill
-            
-            # (B) 수익률 글자색 적용 (빨강/파랑)
-            for cell in row:
-                header_name = ws.cell(row=1, column=cell.column).value
-                if header_name and any(k in header_name for k in profit_keywords):
-                    val_str = str(cell.value)
-                    # 퍼센트 기호, 콤마 등 제거 후 숫자 파싱
-                    clean_val = re.sub(r'[^\d\.\-\+]', '', val_str)
-                    try:
-                        val_float = float(clean_val)
-                        if val_float > 0:
-                            cell.font = red_font
-                        elif val_float < 0:
-                            cell.font = blue_font
-                    except:
-                        pass # 숫자가 아니면 패스
-
-        # 4. 열 너비 자동 조정 (간단하게)
-        for col in ws.columns:
-            max_length = 0
-            column = col[0].column_letter # Get the column name
-            for cell in col:
-                try:
-                    if len(str(cell.value)) > max_length:
-                        max_length = len(str(cell.value))
-                except:
-                    pass
-            adjusted_width = (max_length + 2) * 1.1
-            ws.column_dimensions[column].width = min(adjusted_width, 50) # 너무 넓어지지 않게 제한
-
-        wb.save(filename)
-        print("✅ 스타일 적용 완료!")
-        
-    except Exception as e:
-        print(f"⚠️ 스타일 적용 중 오류 발생: {e}")
-        print("(데이터는 저장되었으나 색상은 적용되지 않았을 수 있습니다.)")
-
 # ==================================================================================
-# [SECTION 3] 메인 실행 루프
+# [SECTION 3] 메인 실행 루프 (Main Execution)
 # ==================================================================================
 
 def main():
+    # 1. 설정 입력
     while True:
         try:
             TOTAL_SYMBOLS_TO_SCRAPE = int(input("수집할 심볼 개수를 입력하세요 (예: 10): "))
@@ -336,6 +276,7 @@ def main():
         except ValueError:
             print("오류: YYYY-MM-DD 형식이 아닙니다.")
     
+    # [확장 기능] 자산 유형 선택
     print("\n[설정] 수집할 자산 유형을 선택하세요:")
     print("1. 주식 (Stocks) - [1W, 1M, 3M, 6M, YTD, 1Y]")
     print("2. ETP (ETF/ETN) - [1M, 3M, YTD, 1Y, 3Y, 5Y]")
@@ -350,6 +291,7 @@ def main():
     
     print(f"✅ 모드: {asset_mode_name} | 기준일: {end_date_str}")
 
+    # 2. 브라우저 시작
     driver = webdriver.Chrome(service=webdriver.chrome.service.Service(ChromeDriverManager().install()))
     wait = WebDriverWait(driver, 15)
     driver.maximize_window()
@@ -360,6 +302,7 @@ def main():
     while input("준비되면 'now' 입력: ").strip().lower() != 'now': pass
     print("자동화 시작...")
 
+    # 3. 왓치리스트 제목 추출 (파일명 생성)
     final_output_filename = "tradingview_data.xlsx"
     try:
         watchlist_title = wait.until(EC.visibility_of_element_located((By.XPATH, WATCHLIST_TITLE_XPATH))).text.strip()
@@ -372,22 +315,28 @@ def main():
     current_symbol = ""
     last_profit_pct = ""
 
+    # 4. 데이터 수집 루프
     for i in range(TOTAL_SYMBOLS_TO_SCRAPE):
         print(f"\n--- [{i+1}/{TOTAL_SYMBOLS_TO_SCRAPE}] 수집 시작 ---")
         try:
+            # (A) 심볼 감지
             if i > 0:
                 wait.until(text_to_be_different_from((By.XPATH, SYMBOL_NAME_XPATH), current_symbol))
             
             current_symbol = wait.until(EC.visibility_of_element_located((By.XPATH, SYMBOL_NAME_XPATH))).text
             print(f"  심볼: [{current_symbol}]")
 
+            # (B) 확장 데이터 수집 (우측 패널)
             details_data = scrape_symbol_details(driver, wait, target_periods)
+
+            # (C) 핵심 데이터 수집 (전략 테스터)
             data = get_strategy_data(driver, wait, last_profit_pct)
             
             if data:
                 data['symbol'] = current_symbol
-                data.update(details_data)
+                data.update(details_data) # 확장 데이터 병합
 
+                # (D) 파생 지표 계산 (Alpha/Beta, CAGR 등)
                 data['trading_duration_years'] = "N/A"
                 data['simple_avg_return_pct'] = "N/A" 
                 data['cagr_pct'] = "N/A"              
@@ -424,6 +373,7 @@ def main():
                 print(f"  [정보] 전략 데이터 없음 (N/A)")
                 last_profit_pct = "N/A"
 
+            # (E) 다음 종목 이동
             driver.find_element(By.TAG_NAME, 'body').send_keys(Keys.ARROW_DOWN)
             time.sleep(0.5)
 
@@ -433,19 +383,23 @@ def main():
 
     driver.quit()
 
+    # 5. 엑셀 저장
     if collected_data:
         try:
             df = pd.DataFrame(collected_data)
             
-            columns_order = ['symbol', 'full_name', 'exchange']
-            columns_order += [f'return_{p}' for p in ['1W', '1M', '3M', '6M', 'YTD', '1Y', '3Y', '5Y']]
+            # 컬럼 순서 정의 (Core + Extensions)
+            columns_order = ['symbol', 'full_name', 'exchange'] # 기본 정보
+            columns_order += [f'return_{p}' for p in ['1W', '1M', '3M', '6M', 'YTD', '1Y', '3Y', '5Y']] # 수익률
             columns_order += ['alpha_beta_status', 'profit_pct', 'trade_1_entry', 'trading_duration_years', 
                               'simple_avg_return_pct', 'win_rate_pct', 'max_loss_trade', 'profit_factor', 
-                              'sharpe_ratio', 'sortino_ratio', 'cagr_pct', 'buy_hold_return', 'net_profit']
+                              'sharpe_ratio', 'sortino_ratio', 'cagr_pct', 'buy_hold_return', 'net_profit'] # 전략 지표
             
+            # 실제 존재하는 컬럼만 선택
             final_columns = [col for col in columns_order if col in df.columns]
             df = df[final_columns]
             
+            # 한글 컬럼명 매핑
             rename_map = {
                 'symbol': '종목코드', 'full_name': '종목명(Full)', 'exchange': '거래소',
                 'alpha_beta_status': '수익기준(Alpha/Beta)', 'profit_pct': '총손익률(%)',
@@ -455,19 +409,13 @@ def main():
                 'profit_factor': '수익지수', 'sharpe_ratio': '샤프레이쇼', 'sortino_ratio': '소티노레이쇼',
                 'buy_hold_return': '매수후보유수익(참고)', 'net_profit': '순이익(참고)'
             }
+            # 수익률 컬럼 한글화 추가
             for p in ['1W', '1M', '3M', '6M', 'YTD', '1Y', '3Y', '5Y']:
                 rename_map[f'return_{p}'] = f'{p}(%)'
                 
             df = df.rename(columns=rename_map)
-            
-            # 1. 일단 엑셀 저장 (데이터)
             df.to_excel(final_output_filename, index=False, engine='openpyxl')
-            print(f"\n💾 데이터 저장 완료. 스타일 입히는 중...")
-            
-            # 2. 스타일 입히기 (함수 호출)
-            style_excel_file(final_output_filename)
-            
-            print(f"🎉 모든 작업 완료! 파일: {final_output_filename}")
+            print(f"\n💾 저장 완료: {final_output_filename}")
             
         except Exception as e:
             print(f"엑셀 저장 실패: {e}")
