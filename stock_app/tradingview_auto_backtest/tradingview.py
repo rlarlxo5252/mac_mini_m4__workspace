@@ -134,14 +134,14 @@ def scrape_symbol_details(driver, wait, target_periods):
     return details
 
 # ==================================================================================
-# [GUI Class] 트레이딩뷰 자동화 메인 인터페이스 (Grand Final + %)
+# [GUI Class] 트레이딩뷰 자동화 메인 인터페이스
 # ==================================================================================
 
 class TradingViewApp:
     def __init__(self, master):
         self.master = master
-        master.title("TradingView Backtest Auto (Final)")
-        master.geometry("550x920") # 너비 약간 증가 (퍼센트 표시 공간)
+        master.title("TradingView Backtest Auto (Final + No.)")
+        master.geometry("550x920") 
         
         # --- 제어 변수 ---
         self.is_running = False
@@ -162,12 +162,12 @@ class TradingViewApp:
         # UI 생성
         self._create_widgets()
         self.update_button_states("ready")
-        self.log_system("시스템 준비 완료. (진행률 표시 적용)")
+        self.log_system("시스템 준비 완료. (버튼 하단 + 순번 추가)")
 
     def _create_widgets(self):
-        # 1. 설정 섹션
+        # 1. 설정 섹션 (Top)
         frame_settings = tk.LabelFrame(self.master, text="🛠️ 기본 설정", padx=10, pady=10)
-        frame_settings.pack(padx=10, pady=5, fill="x")
+        frame_settings.pack(side="top", padx=10, pady=5, fill="x")
 
         tk.Label(frame_settings, text="자산 유형:", font=self.bold_font).grid(row=0, column=0, sticky="nw", pady=5)
         frame_radio = tk.Frame(frame_settings)
@@ -185,9 +185,9 @@ class TradingViewApp:
         self.date_entry.grid(row=2, column=1, sticky="w", padx=5, pady=5)
         self.date_entry.insert(0, datetime.now().strftime('%Y-%m-%d'))
 
-        # 2. 정보 표시 섹션
+        # 2. 정보 표시 섹션 (Top)
         frame_info = tk.LabelFrame(self.master, text="📊 분석 현황", padx=10, pady=10)
-        frame_info.pack(padx=10, pady=5, fill="x")
+        frame_info.pack(side="top", padx=10, pady=5, fill="x")
 
         # Row 0: 현재 심볼
         tk.Label(frame_info, text="현재 심볼:", font=self.bold_font, fg="gray").grid(row=0, column=0, sticky="w", pady=2)
@@ -209,7 +209,7 @@ class TradingViewApp:
         self.lbl_filename = tk.Label(frame_info, text="-", font=self.default_font)
         self.lbl_filename.grid(row=3, column=1, sticky="w", padx=5)
 
-        # Row 4: 진행률 바 (Progress Bar) & [New] 퍼센트 라벨
+        # Row 4: 진행률 바 (Progress Bar) & 퍼센트 라벨
         tk.Label(frame_info, text="진행률:", font=self.bold_font, fg="gray").grid(row=4, column=0, sticky="w", pady=10)
         
         self.progress = ttk.Progressbar(frame_info, orient="horizontal", length=250, mode="determinate")
@@ -218,9 +218,9 @@ class TradingViewApp:
         self.lbl_progress_pct = tk.Label(frame_info, text="0%", font=self.bold_font, fg="blue")
         self.lbl_progress_pct.grid(row=4, column=2, sticky="w", padx=5)
 
-        # 3. 제어 버튼 섹션
+        # 3. 제어 버튼 섹션 (★ 수정됨: side="bottom"으로 하단 고정 ★)
         frame_ctrl = tk.LabelFrame(self.master, text="🎮 제어 패널", padx=10, pady=10)
-        frame_ctrl.pack(padx=10, pady=5, fill="x")
+        frame_ctrl.pack(side="bottom", padx=10, pady=5, fill="x")
 
         frame_top = tk.Frame(frame_ctrl)
         frame_top.pack(fill="x", pady=(0, 5))
@@ -236,9 +236,9 @@ class TradingViewApp:
         self.btn_exit = tk.Button(frame_bot, text="❌ 프로그램 종료", command=self.exit_program, bg="#c0392b", fg="white", font=self.title_font, height=2)
         self.btn_exit.pack(side="right", fill="x", expand=True, padx=2)
 
-        # 4. 로그 섹션
+        # 4. 로그 섹션 (★ 수정됨: 남은 공간 채우기 ★)
         frame_logs = tk.Frame(self.master)
-        frame_logs.pack(padx=10, pady=5, fill="both", expand=True)
+        frame_logs.pack(side="top", padx=10, pady=5, fill="both", expand=True)
         
         tk.Label(frame_logs, text="💾 엑셀 저장 기록", font=self.bold_font).pack(anchor="w")
         self.file_log_text = scrolledtext.ScrolledText(frame_logs, height=4, state='disabled', font=('Consolas', 9), fg="green")
@@ -480,6 +480,7 @@ class TradingViewApp:
                 self.log_system(f"총 {len(collected_data)}개 데이터 저장 시작...")
                 df = pd.DataFrame(collected_data)
                 
+                # 1. 컬럼 순서 지정
                 columns_order = ['symbol', 'full_name', 'exchange']
                 columns_order += [f'return_{p}' for p in target_periods]
                 columns_order += ['alpha_beta_status', 'profit_pct', 'trade_1_entry', 'trading_duration_years',
@@ -489,6 +490,7 @@ class TradingViewApp:
                 final_columns = [col for col in columns_order if col in df.columns]
                 df = df[final_columns]
                 
+                # 2. 컬럼명 한글 변환
                 rename_map = {
                     'symbol': '종목코드', 'full_name': '종목명(Full)', 'exchange': '거래소',
                     'alpha_beta_status': '수익기준(Alpha/Beta)', 'profit_pct': '총손익률(%)',
@@ -502,6 +504,11 @@ class TradingViewApp:
                     rename_map[f'return_{p}'] = f'{p}(%)'
                 
                 df = df.rename(columns=rename_map)
+
+                # [★ 추가됨] 3. 가장 오른쪽 열에 추출 순서 번호 매기기 (No.)
+                df['No.'] = range(1, len(df) + 1)
+
+                # 저장
                 df.to_excel(final_filename, index=False)
                 
                 total_elapsed = time.time() - self.start_time
