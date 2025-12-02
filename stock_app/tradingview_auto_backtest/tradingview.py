@@ -113,18 +113,30 @@ def get_strategy_data(driver, wait, previous_profit_pct):
 WATCHLIST_TITLE_XPATH = "//div[contains(@class, 'widgetbar-widget-watchlist')]//span[contains(@class, 'titleRow-')]"
 DETAILS_FULL_NAME_XPATH = "//a[@data-qa-id='details-element description']"
 DETAILS_EXCHANGE_XPATH = "//span[@data-qa-id='details-element exchange']"
+DETAILS_SECTOR_XPATH = "//a[@data-qa-id='details-element sector']"
+DETAILS_INDUSTRY_XPATH = "//a[@data-qa-id='details-element industry']"
 DETAILS_PERF_CONTAINER_XPATH = "//div[@data-qa-id='details-element performance']"
 
 def scrape_symbol_details(driver, wait, target_periods):
-    details = {'full_name': 'N/A', 'exchange': 'N/A'}
+    details = {'full_name': 'N/A', 'exchange': 'N/A', 'sector': 'N/A', 'industry': 'N/A'}
     for p in target_periods: details[f'return_{p}'] = 'N/A'
+    
+    # 1. 기본 정보
     try:
-        # 종목명 수집
         details['full_name'] = wait.until(EC.visibility_of_element_located((By.XPATH, DETAILS_FULL_NAME_XPATH))).text
         details['exchange'] = wait.until(EC.visibility_of_element_located((By.XPATH, DETAILS_EXCHANGE_XPATH))).text
     except: pass
+    
+    # 2. 섹터/산업 수집
     try:
-        # 수익률 수집
+        details['sector'] = driver.find_element(By.XPATH, DETAILS_SECTOR_XPATH).text
+    except: pass
+    try:
+        details['industry'] = driver.find_element(By.XPATH, DETAILS_INDUSTRY_XPATH).text
+    except: pass
+
+    # 3. 수익률 정보
+    try:
         wait.until(EC.presence_of_element_located((By.XPATH, DETAILS_PERF_CONTAINER_XPATH)))
         for period in target_periods:
             xpath = f"//div[@data-qa-id='details-element performance']//span[text()='{period}']/preceding-sibling::span"
@@ -140,7 +152,7 @@ def scrape_symbol_details(driver, wait, target_periods):
 class TradingViewApp:
     def __init__(self, master):
         self.master = master
-        master.title("TradingView Backtest Auto (Final + No.)")
+        master.title("TradingView Backtest Auto (Clean Style)")
         master.geometry("550x920") 
         
         # --- 제어 변수 ---
@@ -162,7 +174,7 @@ class TradingViewApp:
         # UI 생성
         self._create_widgets()
         self.update_button_states("ready")
-        self.log_system("시스템 준비 완료. (버튼 하단 + 순번 추가)")
+        self.log_system("시스템 준비 완료. (눈이 편한 스타일 적용)")
 
     def _create_widgets(self):
         # 1. 설정 섹션 (Top)
@@ -218,7 +230,7 @@ class TradingViewApp:
         self.lbl_progress_pct = tk.Label(frame_info, text="0%", font=self.bold_font, fg="blue")
         self.lbl_progress_pct.grid(row=4, column=2, sticky="w", padx=5)
 
-        # 3. 제어 버튼 섹션 (★ 수정됨: side="bottom"으로 하단 고정 ★)
+        # 3. 제어 버튼 섹션 (Bottom Fixed)
         frame_ctrl = tk.LabelFrame(self.master, text="🎮 제어 패널", padx=10, pady=10)
         frame_ctrl.pack(side="bottom", padx=10, pady=5, fill="x")
 
@@ -236,7 +248,7 @@ class TradingViewApp:
         self.btn_exit = tk.Button(frame_bot, text="❌ 프로그램 종료", command=self.exit_program, bg="#c0392b", fg="white", font=self.title_font, height=2)
         self.btn_exit.pack(side="right", fill="x", expand=True, padx=2)
 
-        # 4. 로그 섹션 (★ 수정됨: 남은 공간 채우기 ★)
+        # 4. 로그 섹션 (Remaining Space)
         frame_logs = tk.Frame(self.master)
         frame_logs.pack(side="top", padx=10, pady=5, fill="both", expand=True)
         
@@ -409,7 +421,7 @@ class TradingViewApp:
                 try:
                     if not self.is_driver_alive(): raise Exception("브라우저가 닫혔습니다.")
 
-                    # A. 심볼 감지
+                    # A. 심볼 감지 (좌측 상단 이름 확인)
                     if i > 0:
                         self.wait.until(text_to_be_different_from((By.XPATH, SYMBOL_NAME_XPATH), current_symbol))
                     
@@ -418,20 +430,13 @@ class TradingViewApp:
                     self.master.after(0, lambda s=current_symbol: self.lbl_current_data.config(text=s))
                     self.master.after(0, lambda: self.lbl_current_name.config(text="가져오는 중..."))
 
-                    # B. 상세 정보
-                    details_data = scrape_symbol_details(self.driver, self.wait, target_periods)
-                    
-                    full_name = details_data.get('full_name', 'N/A')
-                    self.master.after(0, lambda n=full_name: self.lbl_current_name.config(text=n))
-
-                    # C. 전략 데이터
+                    # B. 전략 데이터 먼저 수집 (로딩 대기 및 확인)
                     data = get_strategy_data(self.driver, self.wait, last_profit_pct)
 
                     if data:
                         data['symbol'] = current_symbol
-                        data.update(details_data)
                         
-                        # D. 계산 로직
+                        # C. 계산 로직
                         data['trading_duration_years'] = "N/A"
                         data['simple_avg_return_pct'] = "N/A"
                         data['cagr_pct'] = "N/A"
@@ -454,6 +459,13 @@ class TradingViewApp:
                         except Exception as e:
                             self.log_system(f"계산 오류: {e}")
 
+                        # D. 상세 정보 (우측 정보창) + 섹터/산업 포함
+                        details_data = scrape_symbol_details(self.driver, self.wait, target_periods)
+                        data.update(details_data)
+                        
+                        full_name = details_data.get('full_name', 'N/A')
+                        self.master.after(0, lambda n=full_name: self.lbl_current_name.config(text=n))
+
                         collected_data.append(data)
                         last_profit_pct = data['profit_pct']
                         self.log_system(f"  -> 성공: {current_symbol} ({full_name})")
@@ -475,17 +487,18 @@ class TradingViewApp:
             self.master.after(0, lambda: self.progress.configure(value=self.target_count))
             self.master.after(0, lambda: self.lbl_progress_pct.config(text="100%"))
 
-            # --- 엑셀 저장 ---
+            # --- 엑셀 저장 (스타일 적용 & 멀티 시트) ---
             if collected_data:
                 self.log_system(f"총 {len(collected_data)}개 데이터 저장 시작...")
                 df = pd.DataFrame(collected_data)
                 
-                # 1. 컬럼 순서 지정
+                # 1. 컬럼 순서 및 정리
                 columns_order = ['symbol', 'full_name', 'exchange']
                 columns_order += [f'return_{p}' for p in target_periods]
                 columns_order += ['alpha_beta_status', 'profit_pct', 'trade_1_entry', 'trading_duration_years',
                                   'simple_avg_return_pct', 'cagr_pct', 'win_rate_pct', 'max_loss_trade',
-                                  'profit_factor', 'sharpe_ratio', 'sortino_ratio', 'buy_hold_return', 'net_profit']
+                                  'profit_factor', 'sharpe_ratio', 'sortino_ratio', 'buy_hold_return', 'net_profit',
+                                  'sector', 'industry']
                 
                 final_columns = [col for col in columns_order if col in df.columns]
                 df = df[final_columns]
@@ -498,19 +511,54 @@ class TradingViewApp:
                     'simple_avg_return_pct': '연평균단순수익률(%)', 'cagr_pct': '연복리수익률(CAGR,%)',
                     'win_rate_pct': '승률(%)', 'max_loss_trade': '최대손실거래(%)',
                     'profit_factor': '수익지수', 'sharpe_ratio': '샤프레이쇼', 'sortino_ratio': '소티노레이쇼',
-                    'buy_hold_return': '매수후보유수익(참고)', 'net_profit': '순이익(참고)'
+                    'buy_hold_return': '매수후보유수익(참고)', 'net_profit': '순이익(참고)',
+                    'sector': '섹터', 'industry': '상세(산업)'
                 }
                 for p in target_periods:
                     rename_map[f'return_{p}'] = f'{p}(%)'
                 
                 df = df.rename(columns=rename_map)
 
-                # [★ 추가됨] 3. 가장 오른쪽 열에 추출 순서 번호 매기기 (No.)
+                # 3. 순번(No.) 추가
                 df['No.'] = range(1, len(df) + 1)
 
-                # 저장
-                df.to_excel(final_filename, index=False)
+                # 4. 요약 테이블 생성 (Compact Version - 수정됨)
+                # 요청사항: 총손익률 제거 / 거래기간 추가
+                compact_cols = ['종목코드', '종목명(Full)', '거래소']
+                compact_cols += [f'{p}(%)' for p in target_periods]
+                compact_cols += ['수익기준(Alpha/Beta)', '총거래기간(년)', '연복리수익률(CAGR,%)', '최대손실거래(%)',
+                                 '섹터', '상세(산업)', 'No.']
+                final_compact_cols = [c for c in compact_cols if c in df.columns]
+                df_compact = df[final_compact_cols]
+
+                # ======================================================
+                # [스타일 함수 정의]
+                # ======================================================
                 
+                # 알파/베타 배경색 함수 (알파: 노란색 배경)
+                def highlight_alpha(val):
+                    if val == '알파(α)':
+                        return 'background-color: #FFF2CC; color: #B45F04; font-weight: bold;' 
+                    elif val == '베타(β)':
+                        return 'color: #7F7F7F;'
+                    return ''
+
+                # 5. 엑셀 쓰기 (스타일 적용 & 멀티 시트)
+                with pd.ExcelWriter(final_filename, engine='openpyxl') as writer:
+                    
+                    # (1) 전체 데이터 시트 저장 (글자색 제거, 알파 배경만 유지)
+                    styler_full = df.style.map(highlight_alpha, subset=['수익기준(Alpha/Beta)'])
+                    styler_full.to_excel(writer, sheet_name='전체_데이터', index=False)
+                    
+                    # (2) 요약 테이블 시트 저장 (글자색 제거, 알파 배경만 유지)
+                    styler_compact = df_compact.style.map(highlight_alpha, subset=['수익기준(Alpha/Beta)'])
+                    styler_compact.to_excel(writer, sheet_name='요약_테이블', index=False)
+                    
+                    # (3) 엑셀 컬럼 너비 자동 조정 (약식)
+                    for sheet in writer.sheets.values():
+                        for col in sheet.columns:
+                            sheet.column_dimensions[col[0].column_letter].width = 15
+
                 total_elapsed = time.time() - self.start_time
                 elapsed_str = time.strftime("%H:%M:%S", time.gmtime(total_elapsed))
                 
